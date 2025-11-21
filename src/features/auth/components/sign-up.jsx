@@ -1,26 +1,86 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSignUp } from "@clerk/clerk-react";
-import { EmailValidate } from "../utils/field-validations";
+import {
+  EmailValidate,
+  PasswordValidate,
+  NameValidate,
+} from "../utils/field-validations";
 
 export default function SignUpPage() {
   const [signUpData, setSignUpData] = useState({
+    fullname: "",
     email: "",
+    password: "",
   });
+  const [isPassword, setIsPassword] = useState(false);
 
   const { isLoaded, signUp } = useSignUp();
+  const [errors, setErrors] = useState({});
 
   // Handle input changes
   const handleChange = (e) => {
     setSignUpData({ ...signUpData, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
-  const handleBlur = () => {
-    EmailValidate(signUpData.email);
+  // name validation
+
+  const handleNameValid = () => {
+    const nameErrors = NameValidate(signUpData.fullname);
+    setErrors({ ...errors, fullname: nameErrors.fullname });
+    return Object.keys(nameErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    console.log("form data submitted");
+  // email validation
+  const handleEmailValid = () => {
+    const emailErrors = EmailValidate(signUpData.email);
+    setErrors({ ...errors, email: emailErrors.email });
+    if (Object.keys(emailErrors).length === 0) {
+      setIsPassword(true);
+    }
+    return Object.keys(emailErrors).length === 0;
+  };
+
+  // password validation
+
+  const handlePasswordValid = () => {
+    const passwordErrors = PasswordValidate(signUpData.password);
+    setErrors({ ...errors, password: passwordErrors.password });
+    return Object.keys(passwordErrors).length === 0;
+  };
+
+  // creating user account on clerk
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    console.log(handleEmailValid());
+
+    if (!handleEmailValid() || !handlePasswordValid()) return;
+    if (!isLoaded) return;
+
+    console.log("passing data to clerk", signUpData);
+
+    // generate payload to create user on clerk
+    const payload = {
+      firstName: signUpData.fullname.split(" ")[0] || "",
+      lastName: signUpData.fullname.split(" ").slice(1).join(" ") || "",
+      emailAddress: signUpData.email,
+      password: signUpData.password,
+    };
+
+    await signUp.create(payload);
+
+    // email verification
+
+    if (payload.emailAddress) {
+      const result = await signUp.prepareEmailAddressVerification({
+        strategy: "email_link",
+        redirectUrl: "http://localhost:5173/auth/verify-email",
+      });
+      console.log("result from clerk", result);
+    }
+    window.location.href = `/auth/verify-email?email=${payload.emailAddress}`;
   };
 
   // Google signup
@@ -29,7 +89,7 @@ export default function SignUpPage() {
       await signUp?.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl: "/auth/sso-callback",
-        redirectUrlComplete: "/auth/reset-password",
+        redirectUrlComplete: "/project",
       });
     } catch (err) {
       console.error(err);
@@ -39,7 +99,7 @@ export default function SignUpPage() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen bg-[#1d1f23] min-w-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen min-w-screen flex flex-col items-center justify-center px-4">
       {/* Logo + Title */}
       <div className="flex gap-4 items-center mb-8">
         <img src="/logo.svg" alt="Staad Builder Logo" className="w-12 h-12 " />
@@ -67,8 +127,24 @@ export default function SignUpPage() {
         </div>
 
         <form onSubmit={handleSubmit}>
+          {/* Name Label */}
+          <label className="text-gray-400 text-sm mb-2 block">NAME</label>
+
+          {/* Name Input */}
+          <input
+            type="text"
+            name="fullname"
+            value={signUpData.fullname}
+            onChange={handleChange}
+            onBlur={handleNameValid}
+            placeholder="Enter your fullname"
+            className="w-full bg-[#3a3c40] text-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {errors.fullname && (
+            <p className="text-red-500 text-xs mt-1 mb-2">{errors.fullname}</p>
+          )}
           {/* Email Label */}
-          <label className="text-gray-400 text-sm mb-2 block">EMAIL</label>
+          <label className="text-gray-400 text-sm mb-2 mt-2 block">EMAIL</label>
 
           {/* Email Input */}
           <input
@@ -76,18 +152,47 @@ export default function SignUpPage() {
             name="email"
             value={signUpData.email}
             onChange={handleChange}
-            onBlur={handleBlur}
+            onBlur={handleEmailValid}
             placeholder="Enter your email"
             className="w-full bg-[#3a3c40] text-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {errors.email && (
+            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+          )}
 
+          {/* only enter password input if user has continued with email */}
+          {isPassword && (
+            <>
+              <label className="text-gray-400 text-sm my-2 block">
+                PASSWORD
+              </label>
+
+              <input
+                type="password"
+                name="password"
+                value={signUpData.password}
+                onChange={handleChange}
+                onBlur={handlePasswordValid}
+                placeholder="Enter 8 digit Password including numbers and letters"
+                className="w-full bg-[#3a3c40] text-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.password && (
+                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+              )}
+            </>
+          )}
           {/* Continue Button */}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-3 rounded-lg mt-6"
-          >
-            Continue with email
-          </button>
+          <div className="">
+            <button
+              type={isPassword === true ? "submit" : "button"}
+              onClick={() => handleEmailValid()}
+              className="w-full bg-blue-600! hover:bg-blue-700 transition text-white py-3 rounded-lg mt-6"
+            >
+              {isPassword === true
+                ? "Create an Account"
+                : "Continue with email"}
+            </button>
+          </div>
         </form>
 
         {/* Sign In Link */}

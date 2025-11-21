@@ -1,0 +1,37 @@
+/* .layout-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topbar {
+  height: 60px;
+  width: 100%;
+}
+
+.layout-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.leftbar {
+  width: 250px;
+  background: #f5f5f5;
+  overflow-y: auto;
+}
+
+.rightbar {
+  width: 300px;
+  background: #fafafa;
+  overflow-y: auto;
+}
+
+.layout-main {
+  flex: 1; /* Key: Takes up all available space */
+/* z-index: 70;
+  overflow-y: auto;
+   CRITICAL FLEXBOX FIXES: */
+/* min-width: 0;  Ensures it shrinks horizontally when content is wide 
+  min-height: 0;  Ensures it can calculate its own height correctly 
+} */
