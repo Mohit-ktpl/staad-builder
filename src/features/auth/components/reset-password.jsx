@@ -1,17 +1,24 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useClerk, useSignIn } from "@clerk/clerk-react";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useSignIn } from "@clerk/clerk-react";
 import { EmailValidate } from "../utils/field-validations";
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  // manage 6 digit verification code
+  const [code, setCode] = useState(new Array(6).fill(""));
   const [isCodeSent, setIsCodeSent] = useState(false);
+  // timer for resend code
+
+  const RESEND_TIME = 10;
+  const [resendTimer, setResendTimer] = useState(RESEND_TIME);
+  const [canResend, setCanResend] = useState(false);
   const [message, setMessage] = useState("");
   const { signIn, isLoaded } = useSignIn();
   const [errors, setErrors] = useState({});
+  const inputRefs = useRef([]);
 
-  const { client } = useClerk();
+  const navigate = useNavigate();
 
   // email validation
   const handleEmailValid = () => {
@@ -27,34 +34,116 @@ export default function ResetPasswordPage() {
       await signIn.create({
         strategy: "reset_password_email_code",
         identifier: email,
-        redirectUrl: "http://localhost:5173/auth/new-password", // optional for Clerk
       });
 
-      setMessage("Code sent! Check your email.");
+      setMessage("Code sent! Check your email and enter it below.");
       setIsCodeSent(true);
     } catch (err) {
       console.error(err);
-      setMessage("Failed to send code. Try again.");
+      setMessage(
+        err.errors?.[0]?.longMessage || "Failed to send code. Try again."
+      );
     }
   };
+  // handle code input change
+  const handleChange = (element, index) => {
+    if (!/^\d?$/.test(element.value)) return;
+
+    const newCode = [...code];
+    newCode[index] = element.value;
+    setCode(newCode);
+
+    // focus next input
+    if (element.value && index < 5) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
+  // handle backspace
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !code[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+  // Handle pasting the code
+  const handlePaste = (e) => {
+    e.preventDefault();
+
+    const pastedData = e.clipboardData.getData("text");
+    const cleanData = pastedData.replace(/\D/g, "").slice(0, 6);
+
+    if (!cleanData) return;
+
+    // start fresh instead of using stale state
+    const newCode = Array(6).fill("");
+
+    cleanData.split("").forEach((char, index) => {
+      newCode[index] = char;
+    });
+
+    setCode(newCode);
+
+    // focus the last filled input
+    const focusIndex = Math.min(cleanData.length - 1, 5);
+    inputRefs.current[focusIndex]?.focus();
+  };
+
+  // use this variable to send code to backend
+
+  const finalCode = code.join("");
+
+  // verifying the code
   const handleVerifyCode = async () => {
-    if (!code || !isLoaded) {
+    if (!finalCode) {
       setMessage("Please enter the code sent to your email.");
       return;
     }
 
+    navigate("/auth/new-password", { state: { email, finalCode } });
+  };
+
+  useEffect(() => {
+    if (!isCodeSent) return;
+    setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 0);
+    setCanResend(false);
+    setResendTimer(RESEND_TIME);
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setCanResend(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isCodeSent]);
+
+  const handleResendCode = async () => {
+    if (!canResend || !isLoaded) return;
+    setIsCodeSent(false);
+
     try {
-      // Verify the reset password code
-      await client.verifyResetPasswordToken({
-        token: code, // the code from email
-        emailAddress: email, // the email used to request reset
+      await signIn.create({
+        strategy: "reset_password_email_code",
+        identifier: email,
       });
 
-      // On success, redirect to the password reset page
-      navigate("/auth/new-password", { state: { email, code } });
+      setMessage("New code sent! Check your email.");
+      setIsCodeSent(true);
+      setCode(Array(6).fill("")); // clear old OTP
+      inputRefs.current[0]?.focus();
+
+      // restart timer
+      setCanResend(false);
+      setResendTimer(RESEND_TIME);
     } catch (err) {
       console.error(err);
-      setMessage("Invalid code. Please try again.");
+      setMessage(
+        err.errors?.[0]?.longMessage || "Failed to resend code. Try again."
+      );
     }
   };
 
@@ -80,6 +169,7 @@ export default function ResetPasswordPage() {
           className="w-full bg-[#3a3c40] text-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={email}
           onBlur={handleEmailValid}
+          disabled={isCodeSent}
           onChange={(e) => setEmail(e.target.value)}
         />
         {errors.email && (
@@ -87,33 +177,59 @@ export default function ResetPasswordPage() {
         )}
         {/* If code is sent, show code input */}
         {isCodeSent && (
-          <input
-            type="text"
-            className="w-full bg-[#3a3c40] text-gray-200 mt-2 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
+          <>
+            {message && (
+              <p
+                className={`mt-4 text-center text-xs ${
+                  message.includes("sent") ? "text-green-400" : "text-red-500"
+                }`}
+              >
+                {message}
+              </p>
+            )}
+            <div className="flex flex-col items-center mt-2 justify-center">
+              <div className="flex gap-2">
+                {code.map((data, index) => (
+                  <input
+                    key={index}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    type="text"
+                    maxLength="1"
+                    ref={(el) => (inputRefs.current[index] = el)}
+                    value={data}
+                    onChange={(e) => handleChange(e.target, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    onPaste={handlePaste}
+                    className="w-12 h-12 text-center text-xl bg-[#3a3c40] text-gray-200 rounded-lg border border-transparent focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                  />
+                ))}
+              </div>
+            </div>
+          </>
         )}
+        <div className="mt-3 text-sm text-gray-400 text-center">
+          {canResend && (
+            <button
+              onClick={handleResendCode}
+              className="w-full text-[#256AFF] hover:text-blue-700 transition  py-3 rounded-lg "
+            >
+              Resend code
+            </button>
+          )}
+          {isCodeSent && resendTimer > 0 && (
+            <span>Resend code in {resendTimer}s</span>
+          )}
+        </div>
 
         {/* Button changes depending on state */}
         <button
           className="w-full bg-[#256AFF] hover:bg-blue-700 transition text-white py-3 rounded-lg mt-6"
           onClick={isCodeSent ? handleVerifyCode : handleSendCode}
+          disabled={!isLoaded}
         >
           {isCodeSent ? "Verify Code" : "Send Code"}
         </button>
-        {/*   
-        <button
-          className="w-full bg-[#256AFF] hover:bg-blue-700 transition text-white py-3 rounded-lg mt-6"
-          onClick={handleReset}
-        >
-          Reset password
-        </button>
-*/}
-        {message && (
-          <p className="text-green-400 mt-4 text-center">{message}</p>
-        )}
 
         <Link
           to="/auth/sign-in"
@@ -125,44 +241,3 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-// import { useState } from "react";
-// import { useSignIn } from "@clerk/clerk-react";
-
-// export default function ResetPassword() {
-//   const { signIn, isLoaded } = useSignIn();
-//   const [email, setEmail] = useState("");
-//   const [sent, setSent] = useState(false);
-//    const [message, setMessage] = useState("");
-
-//   const requestReset = async () => {
-//     if (!isLoaded) return;
-//     try {
-//       await signIn.create({
-//         strategy: "reset_password_email", // MAGIC LINK
-//         identifier: email,
-//       });
-//        setMessage("Password reset email sent! Check your inbox.");
-//       setSent(true);
-//     } catch (e) {
-//       console.error(e);
-//     }
-//   };
-
-//   return (
-//     <div>
-//       {!sent ? (
-//         <>
-//           <input
-//             value={email}
-//             onChange={(e) => setEmail(e.target.value)}
-//             placeholder="Email"
-//             className="text-white"
-//           />
-//           <button onClick={requestReset}>Send reset link</button>
-//         </>
-//       ) : (
-//         <p>Check your email for the reset link!</p>
-//       )}
-//     </div>
-//   );
-// }

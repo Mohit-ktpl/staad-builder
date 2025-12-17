@@ -59,8 +59,6 @@ export default function SignUpPage() {
     if (!handleEmailValid() || !handlePasswordValid()) return;
     if (!isLoaded) return;
 
-    console.log("passing data to clerk", signUpData);
-
     // generate payload to create user on clerk
     const payload = {
       firstName: signUpData.fullname.split(" ")[0] || "",
@@ -74,11 +72,10 @@ export default function SignUpPage() {
     // email verification
 
     if (payload.emailAddress) {
-      const result = await signUp.prepareEmailAddressVerification({
+      await signUp.prepareEmailAddressVerification({
         strategy: "email_link",
         redirectUrl: "http://localhost:5173/auth/verify-email",
       });
-      console.log("result from clerk", result);
     }
     window.location.href = `/auth/verify-email?email=${payload.emailAddress}`;
   };
