@@ -14,8 +14,8 @@ import {
 import { LuPanelLeft } from "react-icons/lu";
 import { motion, AnimatePresence } from "framer-motion";
 
-import FormModal from "../../components/FormModal";
-import ImportOverlay from "../../components/ImportOverlay";
+import FormModal from "../../../components/FormModal";
+import ImportOverlay from "../../../components/ImportOverlay";
 import { useNavigate } from "react-router-dom";
 
 // --- START: Helper Components ---

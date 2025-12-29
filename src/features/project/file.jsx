@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, GizmoHelper, GizmoViewport } from "@react-three/drei";
+import { useAuth } from "@clerk/clerk-react";
+import { div, h1 } from "framer-motion/client";
+import { useNavigate } from "react-router-dom";
 
 // import TopToolbar from "../../../layout/TopToolbar";
 // import LeftPanel from "../../../layout/LeftPanel";
@@ -39,6 +42,8 @@ function SafeGizmo({ marginLeft = 280 }) {
 
 export default function ProjectPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { isLoaded, isSignedIn, userId } = useAuth();
+  const navigate = useNavigate();
   console.log("project page rendered");
 
   useEffect(() => {
@@ -49,6 +54,14 @@ export default function ProjectPage() {
   useEffect(() => {
     localStorage.setItem("sidebar", isSidebarOpen);
   }, [isSidebarOpen]);
+
+  if (!isLoaded) {
+    return <div className="flex justify-center items-center">Loading....</div>;
+  }
+  if (!isSignedIn) {
+    navigate("/auth/sign-in");
+  }
+  console.log("hello", userId);
 
   return (
     <div

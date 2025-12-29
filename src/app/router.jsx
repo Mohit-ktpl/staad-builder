@@ -10,12 +10,13 @@ import SignInPage from "../features/auth/components/sign-in";
 import ResetPasswordPage from "../features/auth/components/reset-password";
 import NewPasswordPage from "../features/auth/components/new-password.jsx";
 import SSOCallbackPage from "../features/auth/components/sso-callback";
-import AppLayout from "./layout/AppLayout";
+import AppLayout from "./layouts/projectLayout/AppLayout.jsx";
 import VerifyEmail from "../features/auth/components/verify-email";
 import ProjectPage from "../features/project/file.jsx";
 import { ProjectPageWrapper } from "../features/project/new-file.jsx";
 import ProtectedRoute from "../features/auth/components/ProtectedRoutes.jsx";
-
+import HomeLayout from "./layouts/homeLayout/HomeLayout.jsx";
+import HomeProjects from "../features/home/projects.jsx";
 import "../App.css";
 
 export default function AppRouter() {
@@ -23,6 +24,29 @@ export default function AppRouter() {
     // <div className="min-h-screen min-w-screen">
     <>
       <Router>
+        {/* home page routes */}
+
+        <Routes>
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <HomeLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <HomeProjects />
+                </ProtectedRoute>
+              }
+            ></Route>
+          </Route>
+        </Routes>
+
+        {/* product routes */}
         <Routes>
           {/* protected routes */}
           <Route path="/project" element={<AppLayout />}>
