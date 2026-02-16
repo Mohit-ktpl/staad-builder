@@ -1,7 +1,7 @@
 import LeftBarPanel from "./LeftBarPanel";
-import MenuBar from "./MenuBar";
-import Topbar from "./Topbar";
-import Footer from "./Footer";
+import MenuBar from "./MenuBar.jsx";
+import Topbar from "./Topbar.jsx";
+import Footer from "./Footer.jsx";
 import UpgradeBanner from "./UpgradeBanner";
 import { Outlet } from "react-router-dom";
 import MobileWarning from "../../../components/MobileWarning";

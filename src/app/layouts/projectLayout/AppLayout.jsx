@@ -1,7 +1,7 @@
 import React from "react";
-import LeftPanel from "./leftPanel";
-import RightPanel from "./RightPanel";
-import TopToolbar from "./TopToolbar";
+import LeftPanel from "./leftPanel.jsx";
+import RightPanel from "./RightPanel.jsx";
+import TopToolbar from "./TopToolbar.jsx";
 import { Outlet } from "react-router-dom";
 // import "./layout.css";
 export default function AppLayout() {
