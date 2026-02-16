@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EmailValidate, PasswordValidate } from "../utils/field-validations";
-import { useUser, useSignIn, useClerk } from "@clerk/clerk-react";
+import { useUser, useSignIn, useSignUp, useClerk } from "@clerk/clerk-react";
 
 export default function SignInPage() {
   // store signIn credentials
@@ -18,6 +18,7 @@ export default function SignInPage() {
   const navigate = useNavigate();
   const { user, isSignedIn } = useUser();
   const { signIn, isLoaded } = useSignIn();
+  const { signUp, isLoaded: isSignUpLoaded } = useSignUp();
   const { setActive } = useClerk();
 
   //--------------- If the user is already signed in, redirect to dashboard------------------
@@ -53,10 +54,10 @@ export default function SignInPage() {
   // google sign-in
 
   const handleGoogleSignIn = async () => {
-    if (!isLoaded) return;
+    if (!isSignUpLoaded) return;
 
     try {
-      await signIn.authenticateWithRedirect({
+      await signUp.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl: "/auth/sso-callback",
         redirectUrlComplete: "/project",

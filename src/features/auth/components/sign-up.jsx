@@ -74,7 +74,7 @@ export default function SignUpPage() {
     if (payload.emailAddress) {
       await signUp.prepareEmailAddressVerification({
         strategy: "email_link",
-        redirectUrl: "http://localhost:5173/auth/verify-email",
+        redirectUrl: `${window.location.origin}/project`,
       });
     }
     window.location.href = `/auth/verify-email?email=${payload.emailAddress}`;
