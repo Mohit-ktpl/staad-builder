@@ -1,5 +1,5 @@
 import React from "react";
-import LeftPanel from "./leftPanel.jsx";
+import LeftPanel from "./LeftPanel.jsx";
 import RightPanel from "./RightPanel.jsx";
 import TopToolbar from "./TopToolbar.jsx";
 import { Outlet } from "react-router-dom";
